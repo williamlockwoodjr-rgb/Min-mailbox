@@ -3,7 +3,10 @@ import os
 from flask import Flask, jsonify, request, render_template
 from openai import OpenAI
 
-app = Flask(__name__)
+app = Flask(__name__)app = Flask(__name__)
+
+
+
 
 
 @app.get("/")
