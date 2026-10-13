@@ -14,25 +14,25 @@ def home():
     return render_template("index.html")
 
 
-    @app.get("/api/health")
-    def health():
+@app.get("/api/health")
+def health():
         if not os.environ.get("OPENAI_API_KEY"):
                 return jsonify(
                             ok=False,
                                         error="Server is missing its OPENAI_API_KEY setting."
                                                 ), 503
-                                                    return jsonify(ok=True)
+        return jsonify(ok=True)
 
 
-                                                    @app.post("/api/chat")
-                                                    def chat():
-                                                        api_key = os.environ.get("OPENAI_API_KEY")
-                                                            if not api_key:
-                                                                    return jsonify(
+@app.post("/api/chat")
+def chat():
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
+            return jsonify(
                                                                                 error="The server administrator has not configured the OpenAI API key yet."
-                                                                                        ), 503
+            ), 503
 
-                                                                                            body = request.get_json(silent=True) or {}
+        body = request.ge {t_json(silent=True) or}
                                                                                                 messages = body.get("input", [])
 
                                                                                                     if not isinstance(messages, list) or not messages:
