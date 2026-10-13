@@ -23,7 +23,7 @@ def home():
                                                 ), 503
                                                     return jsonify(ok=True)
 
-app = Flask(__name__)
+
                                                     @app.post("/api/chat")
                                                     def chat():
                                                         api_key = os.environ.get("OPENAI_API_KEY")
