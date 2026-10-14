@@ -32,7 +32,7 @@ def chat():
                                                                                 error="The server administrator has not configured the OpenAI API key yet."
             ), 503
 
-        body = request.ge {t_json(silent=True) or}
+        body = request.get_json(silent=True) or{}
                                                                                                 messages = body.get("input", [])
 
                                                                                                     if not isinstance(messages, list) or not messages:
