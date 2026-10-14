@@ -28,9 +28,10 @@ def health():
 def chat():
         api_key = os.environ.get("OPENAI_API_KEY")
         if not api_key:
-            return jsonify(
-                                                                                error="The server administrator has not configured the OpenAI API key yet."
-            ), 503
+               return jsonify({
+                    "error:"The server administrator has not configured the OpenAI API key yet."
+            
+            }), 503
 
         body = request.get_json(silent=True) or{}
                                                                                                 messages = body.get("input", [])
