@@ -1,0 +1,276 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mini Mailbox</title>
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      color: #243247;
+    }
+
+    header {
+      background: #253b59;
+      color: white;
+      padding: 22px;
+      text-align: center;
+    }
+
+    header h1 { margin: 0 0 8px; }
+    header p { margin: 0; }
+
+    main {
+      max-width: 760px;
+      margin: 24px auto;
+      padding: 16px;
+    }
+
+    .panel {
+      background: white;
+      border-radius: 12px;
+      padding: 18px;
+      box-shadow: 0 3px 14px #00000012;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0 6px;
+      font-weight: bold;
+    }
+
+    select, textarea, button {
+      width: 100%;
+      font: inherit;
+      padding: 12px;
+      border-radius: 8px;
+    }
+
+    select, textarea {
+      border: 1px solid #bbc6d3;
+      background: white;
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    button {
+      border: 0;
+      background: #315f91;
+      color: white;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+
+    .secondary {
+      background: #687789;
+    }
+
+    #messages {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message {
+      padding: 12px;
+      border-radius: 10px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .user {
+      background: #e1edfc;
+      margin-left: 24px;
+    }
+
+    .assistant {
+      background: #e5f5e9;
+      margin-right: 24px;
+    }
+
+    .who {
+      font-weight: bold;
+      margin-bottom: 6px;
+    }
+
+    #status {
+      margin-top: 12px;
+      white-space: pre-wrap;
+    }
+
+    footer {
+      text-align: center;
+      color: #657386;
+      padding: 20px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📬 Mini Mailbox</h1>
+    <p>A little place for your thoughts, ideas, and conversations.</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <label for="mode">Choose your assistant</label>
+      <select id="mode">
+        <option value="mailbox">Mini Mailbox</option>
+        <option value="agent007">Project Agent 007</option>
+        <option value="financial">Financial Wizard</option>
+      </select>
+
+      <div id="messages" aria-live="polite"></div>
+
+      <form id="chatForm">
+        <label for="message">Your message</label>
+        <textarea id="message"
+          placeholder="Write your message here..."
+          required></textarea>
+        <button id="send" type="submit">Send Message</button>
+      </form>
+
+      <div id="status" role="status"></div>
+      <button id="clear" class="secondary" type="button">
+        Clear Conversation
+      </button>
+    </section>
+  </main>
+
+  <footer>
+    Your conversation history is saved in this browser.
+  </footer>
+
+  <script>
+    const form = document.getElementById("chatForm");
+    const input = document.getElementById("message");
+    const messagesBox = document.getElementById("messages");
+    const statusBox = document.getElementById("status");
+    const sendButton = document.getElementById("send");
+    const modeSelect = document.getElementById("mode");
+
+    const STORAGE_KEY = "miniMailboxMessages";
+    let messages = [];
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+      if (Array.isArray(saved)) {
+        messages = saved.filter(item =>
+          item &&
+          ["user", "assistant"].includes(item.role) &&
+          typeof item.content === "string"
+        );
+      }
+    } catch (error) {
+      messages = [];
+    }
+
+    function saveMessages() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+      } catch (error) {
+        statusBox.textContent =
+          "Your browser could not save the conversation.";
+      }
+    }
+
+    function displayMessages() {
+      messagesBox.replaceChildren();
+
+      for (const item of messages) {
+        const card = document.createElement("div");
+        card.className = "message " + item.role;
+
+        const who = document.createElement("div");
+        who.className = "who";
+        who.textContent =
+          item.role === "user" ? "You" : "Mini Mailbox AI";
+
+        const content = document.createElement("div");
+        content.textContent = item.content;
+
+        card.append(who, content);
+        messagesBox.appendChild(card);
+      }
+
+      messagesBox.scrollTop = messagesBox.scrollHeight;
+    }
+
+    displayMessages();
+
+    form.addEventListener("submit", async event => {
+      event.preventDefault();
+
+      const text = input.value.trim();
+      if (!text) return;
+
+      messages.push({ role: "user", content: text });
+      saveMessages();
+      displayMessages();
+
+      input.value = "";
+      statusBox.textContent = "Waiting for your AI reply...";
+      sendButton.disabled = true;
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            mode: modeSelect.value,
+            input: messages.slice(-30)
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "The server returned an error.");
+        }
+
+        messages.push({
+          role: "assistant",
+          content: data.reply || "I received an empty reply."
+        });
+
+        saveMessages();
+        displayMessages();
+        statusBox.textContent = "Reply received.";
+      } catch (error) {
+        statusBox.textContent =
+          "Could not get an AI reply: " + error.message +
+          "\nYour message remains in the conversation. You can try again.";
+      } finally {
+        sendButton.disabled = false;
+        input.focus();
+      }
+    });
+
+    document.getElementById("clear").addEventListener("click", () => {
+      if (!confirm("Clear the saved conversation in this browser?")) return;
+
+      messages = [];
+      saveMessages();
+      displayMessages();
+      statusBox.textContent = "Conversation cleared.";
+    });
+  </script>
+</body>
+</html>
