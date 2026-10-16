@@ -155,7 +155,7 @@ def chat():
             options["tools"] = [{"type": "web_search"}]
 
         response = client.responses.create(**options)
-                    reply_text = (response.output_text or "").strip()
+        reply_text = (response.output_text or "").strip()
             if not reply_text:
                 app.logger.warning("OpenAI returned an empty text reply.")
                 reply_text = (
