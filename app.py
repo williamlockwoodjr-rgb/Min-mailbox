@@ -155,7 +155,14 @@ def chat():
             options["tools"] = [{"type": "web_search"}]
 
         response = client.responses.create(**options)
-        return jsonify(reply=response.output_text or "")
+                    reply_text = (response.output_text or "").strip()
+            if not reply_text:
+                app.logger.warning("OpenAI returned an empty text reply.")
+                reply_text = (
+                    "I couldn't produce a text reply this time. "
+                    "Please try once more."
+                )
+            return jsonify(reply=reply_text)
     except Exception as exc:
         message = str(exc)
         app.logger.exception("OpenAI request failed")
