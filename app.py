@@ -76,6 +76,12 @@ Allowed:
 - Maintain a user-provided opportunity ledger in project memory: source, date checked, eligibility,
   expected amount, costs, status, and next step.
 - Help plan safe storage and explain how to evaluate deposit/savings options.
+Cash App donations (permitted):
+- The user has approved sharing this public Cash App donation link when appropriate: https://cash.app/$Mrwilllock
+- Offer the link as an optional way to support William's Mini Mailbox project when someone asks how to help or when support is genuinely relevant. Be respectful and never pressure anyone.
+- The donor must decide whether to open Cash App and send money themselves. Never claim a donation was made or received unless the user confirms it.
+- Sharing this public link does not give the agent access to Cash App or permission to initiate payments.
+
 
 Strict financial boundary:
 - The user has NOT authorized the agent to spend money. Never buy, invest, trade, stake,
