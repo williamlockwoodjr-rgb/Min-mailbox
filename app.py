@@ -154,14 +154,29 @@ def chat():
         if mode in ("agent007", "financial") and ENABLE_WEB_SEARCH:
             options["tools"] = [{"type": "web_search"}]
 
-        response = client.responses.create(**options)
+                response = client.responses.create(**options)
         reply_text = (response.output_text or "").strip()
+
         if not reply_text:
-                app.logger.warning("OpenAI returned an empty text reply.")
-                reply_text = (
-                    "I couldn't produce a text reply this time. "
-                    "Please try once more."
-                )
+            output_types = [
+                getattr(item, "type", type(item).__name__)
+                for item in (getattr(response, "output", None) or [])
+            ]
+            details = getattr(response, "incomplete_details", None)
+            reason = getattr(details, "reason", None) if details else None
+
+            app.logger.warning(
+                "OpenAI response contained no text "
+                "(status=%s, output_types=%s, incomplete_reason=%s)",
+                getattr(response, "status", "unknown"),
+                output_types,
+                reason or "none",
+            )
+            return jsonify(
+                error="The AI returned no text. Please try again. "
+                "If this repeats, check the server logs for the response status."
+            ), 502
+
         return jsonify(reply=reply_text)
     except Exception as exc:
         message = str(exc)
