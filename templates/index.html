@@ -135,6 +135,50 @@
         <option value="financial">Financial Wizard</option>
       </select>
 
+<!-- Project Agent 007 Workspace -->
+<section id="agentWorkspace" class="panel" style="margin-bottom: 18px;">
+  <h2>🧰 Project Agent 007 Workspace</h2>
+  <p>Your shared workspace for research, development, and collaboration.</p>
+
+  <button id="workspaceToggle" type="button" aria-expanded="false">
+    Open Workspace
+  </button>
+
+  <div id="workspaceContent" hidden>
+    <h3>🎒 Backpack</h3>
+    <p>Collect research, discoveries, tools, ideas, and unfinished investigations.</p>
+    <textarea id="backpackEntry"
+      placeholder="Add a research finding, idea, tool, or investigation..."></textarea>
+    <button id="saveBackpack" type="button">Save to Backpack</button>
+    <div id="backpackItems" aria-live="polite"></div>
+
+    <hr>
+
+    <h3>📋 Clipboard</h3>
+    <p>Draft code, proposed changes, test plans, and review notes.</p>
+    <textarea id="clipboardEntry"
+      placeholder="Draft code or record a proposed change..."></textarea>
+    <button id="saveClipboard" type="button">Save to Clipboard</button>
+    <div id="clipboardItems" aria-live="polite"></div>
+
+    <hr>
+
+    <h3>🧠 Project Memory</h3>
+    <p>Save project decisions and reminders for later sessions.</p>
+    <textarea id="memoryEntry"
+      placeholder="Record an important project decision or reminder..."></textarea>
+    <button id="saveMemory" type="button">Save to Memory</button>
+    <div id="memoryItems" aria-live="polite"></div>
+
+    <hr>
+
+    <h3>🤝 Trinity Review</h3>
+    <p>
+      Prepare ideas for review by you, Agent 007, and ChatGPT.
+      You retain final approval for important changes.
+    </p>
+  </div>
+</section>
       <div id="messages" aria-live="polite"></div>
 
       <form id="chatForm">
@@ -271,6 +315,158 @@
       displayMessages();
       statusBox.textContent = "Conversation cleared.";
     });
+// Project Agent 007 Workspace functions
+const workspaceToggle = document.getElementById("workspaceToggle");
+const workspaceContent = document.getElementById("workspaceContent");
+
+if (workspaceToggle && workspaceContent) {
+  workspaceToggle.addEventListener("click", () => {
+    const isOpening = workspaceContent.hidden;
+    workspaceContent.hidden = !isOpening;
+    workspaceToggle.textContent = isOpening
+      ? "Close Workspace"
+      : "Open Workspace";
+    workspaceToggle.setAttribute("aria-expanded", String(isOpening));
+  });
+}
+
+function loadWorkspaceItems(key) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(saved) ? saved : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveWorkspaceItem(key, text, displayId) {
+  const cleanedText = text.trim();
+
+  if (!cleanedText) {
+    statusBox.textContent = "Please enter something before saving.";
+    return;
+  }
+
+  const items = loadWorkspaceItems(key);
+  items.push({
+    text: cleanedText,
+    savedAt: new Date().toISOString()
+  });
+
+  try {
+    localStorage.setItem(key, JSON.stringify(items));
+    document.getElementById(displayId).replaceChildren();
+
+    items.forEach((item, index) => {
+      const entry = document.createElement("div");
+      entry.style.border = "1px solid #d0d7de";
+      entry.style.borderRadius = "6px";
+      entry.style.padding = "10px";
+      entry.style.marginTop = "8px";
+
+      const content = document.createElement("p");
+      content.textContent = item.text;
+
+      const removeButton = document.createElement("button");
+      removeButton.type = "button";
+      removeButton.textContent = "Delete";
+      removeButton.className = "secondary";
+
+      removeButton.addEventListener("click", () => {
+        const remaining = loadWorkspaceItems(key);
+        remaining.splice(index, 1);
+        localStorage.setItem(key, JSON.stringify(remaining));
+        renderWorkspaceItems(key, displayId);
+      });
+
+      entry.append(content, removeButton);
+      document.getElementById(displayId).appendChild(entry);
+    });
+
+    statusBox.textContent = "Workspace entry saved in this browser.";
+  } catch (error) {
+    statusBox.textContent =
+      "Could not save this entry. Browser storage may be unavailable.";
+  }
+}
+
+function renderWorkspaceItems(key, displayId) {
+  const container = document.getElementById(displayId);
+  if (!container) return;
+
+  container.replaceChildren();
+
+  loadWorkspaceItems(key).forEach((item, index) => {
+    const entry = document.createElement("div");
+    entry.style.border = "1px solid #d0d7de";
+    entry.style.borderRadius = "6px";
+    entry.style.padding = "10px";
+    entry.style.marginTop = "8px";
+
+    const content = document.createElement("p");
+    content.textContent = item.text;
+
+    const removeButton = document.createElement("button");
+    removeButton.type = "button";
+    removeButton.textContent = "Delete";
+    removeButton.className = "secondary";
+
+    removeButton.addEventListener("click", () => {
+      const items = loadWorkspaceItems(key);
+      items.splice(index, 1);
+
+      try {
+        localStorage.setItem(key, JSON.stringify(items));
+        renderWorkspaceItems(key, displayId);
+      } catch (error) {
+        statusBox.textContent = "Could not update browser storage.";
+      }
+    });
+
+    entry.append(content, removeButton);
+    container.appendChild(entry);
+  });
+}
+
+function connectWorkspaceSave(buttonId, inputId, key, displayId) {
+  const button = document.getElementById(buttonId);
+  const input = document.getElementById(inputId);
+
+  if (!button || !input) return;
+
+  button.addEventListener("click", () => {
+    saveWorkspaceItem(key, input.value, displayId);
+
+    if (input.value.trim()) {
+      input.value = "";
+    }
+  });
+}
+
+connectWorkspaceSave(
+  "saveBackpack",
+  "backpackEntry",
+  "agent007Backpack",
+  "backpackItems"
+);
+
+connectWorkspaceSave(
+  "saveClipboard",
+  "clipboardEntry",
+  "agent007Clipboard",
+  "clipboardItems"
+);
+
+connectWorkspaceSave(
+  "saveMemory",
+  "memoryEntry",
+  "agent007Memory",
+  "memoryItems"
+);
+
+renderWorkspaceItems("agent007Backpack", "backpackItems");
+renderWorkspaceItems("agent007Clipboard", "clipboardItems");
+renderWorkspaceItems("agent007Memory", "memoryItems");
   </script>
 </body>
 </html>
