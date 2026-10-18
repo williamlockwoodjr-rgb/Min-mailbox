@@ -197,7 +197,7 @@ def chat():
         if mode in ("agent007", "financial") and ENABLE_WEB_SEARCH:
             options["tools"] = [{"type": "web_search"}]
 
-                response = client.responses.create(**options)
+        response = client.responses.create(**options)
         reply_text = (response.output_text or "").strip()
 
         if not reply_text:
