@@ -192,7 +192,7 @@ def chat():
             "model": MODEL,
             "instructions": instructions,
             "input": clean_input,
-            "max_output_tokens": 1200,
+            "max_output_tokens": 5000,
         }
         if mode in ("agent007", "financial") and ENABLE_WEB_SEARCH:
             options["tools"] = [{"type": "web_search"}]
