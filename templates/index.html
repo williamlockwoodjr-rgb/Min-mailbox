@@ -78,6 +78,24 @@
       background: #687789;
     }
 
+    .voice-controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .voice-controls button {
+      flex: 1 1 150px;
+      width: auto;
+    }
+
+    .voice-note {
+      color: #657386;
+      font-size: 13px;
+      margin: 8px 0 0;
+    }
+
     #messages {
       margin-top: 20px;
       display: flex;
@@ -184,8 +202,15 @@
       <form id="chatForm">
         <label for="message">Your message</label>
         <textarea id="message"
-          placeholder="Write your message here..."
+          placeholder="Write your message here, or use the microphone below..."
           required></textarea>
+        <div class="voice-controls">
+          <button id="voiceInput" class="secondary" type="button">🎙️ Speak a Message</button>
+          <button id="stopListening" class="secondary" type="button" disabled>⏹ Stop Listening</button>
+          <button id="readLatest" class="secondary" type="button">🔊 Read Latest Reply</button>
+          <button id="stopSpeaking" class="secondary" type="button">🔇 Stop Speaking</button>
+        </div>
+        <p class="voice-note">Voice input requires browser microphone permission. Spoken replies use your browser's built-in voice.</p>
         <button id="send" type="submit">Send Message</button>
       </form>
 
@@ -257,6 +282,78 @@
 
     displayMessages();
 
+    // Browser-based voice input and spoken replies. These controls do not
+    // send audio to the AI; speech recognition fills the message box with text.
+    const voiceInputButton = document.getElementById("voiceInput");
+    const stopListeningButton = document.getElementById("stopListening");
+    const readLatestButton = document.getElementById("readLatest");
+    const stopSpeakingButton = document.getElementById("stopSpeaking");
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    let recognition = null;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = navigator.language || "en-US";
+      recognition.interimResults = true;
+      recognition.continuous = false;
+
+      recognition.addEventListener("start", () => {
+        voiceInputButton.disabled = true;
+        stopListeningButton.disabled = false;
+        statusBox.textContent = "Listening. Speak clearly, then stop or pause.";
+      });
+      recognition.addEventListener("result", event => {
+        let transcript = "";
+        for (let i = 0; i < event.results.length; i++) {
+          transcript += event.results[i][0].transcript;
+        }
+        input.value = transcript.trim();
+      });
+      recognition.addEventListener("error", event => {
+        statusBox.textContent = "Microphone/voice input issue: " + event.error + ". You can type your message instead.";
+      });
+      recognition.addEventListener("end", () => {
+        voiceInputButton.disabled = false;
+        stopListeningButton.disabled = true;
+        if (input.value.trim()) statusBox.textContent = "Voice text is ready. Press Send Message when you're ready.";
+      });
+      voiceInputButton.addEventListener("click", () => {
+        try { recognition.start(); }
+        catch (error) { statusBox.textContent = "Voice input is already starting. Please wait a moment."; }
+      });
+      stopListeningButton.addEventListener("click", () => recognition.stop());
+    } else {
+      voiceInputButton.addEventListener("click", () => {
+        statusBox.textContent = "This browser does not support speech recognition. Try Chrome, allow microphone access, or type your message.";
+      });
+      voiceInputButton.title = "Speech recognition is not supported by this browser";
+    }
+
+    function speakLatestReply() {
+      if (!("speechSynthesis" in window)) {
+        statusBox.textContent = "This browser does not support spoken replies.";
+        return;
+      }
+      const latest = [...messages].reverse().find(item => item.role === "assistant" && typeof item.content === "string" && item.content.trim());
+      if (!latest) {
+        statusBox.textContent = "There is no AI reply to read yet.";
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(latest.content);
+      utterance.lang = navigator.language || "en-US";
+      utterance.onstart = () => { statusBox.textContent = "Reading the latest reply aloud."; };
+      utterance.onend = () => { statusBox.textContent = "Finished reading the reply."; };
+      utterance.onerror = () => { statusBox.textContent = "The browser could not play the spoken reply."; };
+      window.speechSynthesis.speak(utterance);
+    }
+
+    readLatestButton.addEventListener("click", speakLatestReply);
+    stopSpeakingButton.addEventListener("click", () => {
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      statusBox.textContent = "Spoken reply stopped.";
+    });
+
     form.addEventListener("submit", async event => {
       event.preventDefault();
 
@@ -316,157 +413,258 @@
       statusBox.textContent = "Conversation cleared.";
     });
 // Project Agent 007 Workspace functions
-const workspaceToggle = document.getElementById("workspaceToggle");
-const workspaceContent = document.getElementById("workspaceContent");
+// Keep the existing storage keys so previously saved entries remain available.
+(() => {
+  const AREAS = {
+    backpack: { key: "agent007Backpack", input: "backpackEntry", list: "backpackItems", button: "saveBackpack", label: "Backpack" },
+    clipboard: { key: "agent007Clipboard", input: "clipboardEntry", list: "clipboardItems", button: "saveClipboard", label: "Clipboard" },
+    memory: { key: "agent007Memory", input: "memoryEntry", list: "memoryItems", button: "saveMemory", label: "Project Memory" }
+  };
+  const CHANGE_KEY = "agent007WorkspaceLastChange";
+  const MAX_ENTRY_LENGTH = 20000;
 
-if (workspaceToggle && workspaceContent) {
-  workspaceToggle.addEventListener("click", () => {
-    const isOpening = workspaceContent.hidden;
-    workspaceContent.hidden = !isOpening;
-    workspaceToggle.textContent = isOpening
-      ? "Close Workspace"
-      : "Open Workspace";
-    workspaceToggle.setAttribute("aria-expanded", String(isOpening));
-  });
-}
-
-function loadWorkspaceItems(key) {
-  try {
-    const saved = JSON.parse(localStorage.getItem(key) || "[]");
-    return Array.isArray(saved) ? saved : [];
-  } catch (error) {
-    return [];
-  }
-}
-
-function saveWorkspaceItem(key, text, displayId) {
-  const cleanedText = text.trim();
-
-  if (!cleanedText) {
-    statusBox.textContent = "Please enter something before saving.";
-    return;
+  function makeId() {
+    return (globalThis.crypto && typeof crypto.randomUUID === "function")
+      ? crypto.randomUUID()
+      : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 11);
   }
 
-  const items = loadWorkspaceItems(key);
-  items.push({
-    text: cleanedText,
-    savedAt: new Date().toISOString()
-  });
-
-  try {
-    localStorage.setItem(key, JSON.stringify(items));
-    document.getElementById(displayId).replaceChildren();
-
-    items.forEach((item, index) => {
-      const entry = document.createElement("div");
-      entry.style.border = "1px solid #d0d7de";
-      entry.style.borderRadius = "6px";
-      entry.style.padding = "10px";
-      entry.style.marginTop = "8px";
-
-      const content = document.createElement("p");
-      content.textContent = item.text;
-
-      const removeButton = document.createElement("button");
-      removeButton.type = "button";
-      removeButton.textContent = "Delete";
-      removeButton.className = "secondary";
-
-      removeButton.addEventListener("click", () => {
-        const remaining = loadWorkspaceItems(key);
-        remaining.splice(index, 1);
-        localStorage.setItem(key, JSON.stringify(remaining));
-        renderWorkspaceItems(key, displayId);
-      });
-
-      entry.append(content, removeButton);
-      document.getElementById(displayId).appendChild(entry);
+  function readItems(area) {
+    const config = AREAS[area];
+    if (!config) throw new Error("Unknown workspace area.");
+    let raw;
+    try {
+      raw = localStorage.getItem(config.key);
+    } catch (error) {
+      throw new Error("Browser storage is unavailable.");
+    }
+    if (!raw) return [];
+    let parsed;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (error) {
+      throw new Error(config.label + " data appears corrupted. It was not overwritten.");
+    }
+    if (!Array.isArray(parsed)) {
+      throw new Error(config.label + " data has an unexpected format. It was not overwritten.");
+    }
+    const normalized = parsed.map((item) => {
+      // Accept the original {text, savedAt} format without discarding its content.
+      return {
+        id: item && item.id ? String(item.id) : makeId(),
+        body: item && typeof item.body === "string" ? item.body :
+              (item && typeof item.text === "string" ? item.text : ""),
+        createdAt: item && item.createdAt ? item.createdAt :
+                   (item && item.savedAt ? item.savedAt : new Date().toISOString()),
+        version: 1
+      };
     });
 
-    statusBox.textContent = "Workspace entry saved in this browser.";
-  } catch (error) {
-    statusBox.textContent =
-      "Could not save this entry. Browser storage may be unavailable.";
-  }
-}
-
-function renderWorkspaceItems(key, displayId) {
-  const container = document.getElementById(displayId);
-  if (!container) return;
-
-  container.replaceChildren();
-
-  loadWorkspaceItems(key).forEach((item, index) => {
-    const entry = document.createElement("div");
-    entry.style.border = "1px solid #d0d7de";
-    entry.style.borderRadius = "6px";
-    entry.style.padding = "10px";
-    entry.style.marginTop = "8px";
-
-    const content = document.createElement("p");
-    content.textContent = item.text;
-
-    const removeButton = document.createElement("button");
-    removeButton.type = "button";
-    removeButton.textContent = "Delete";
-    removeButton.className = "secondary";
-
-    removeButton.addEventListener("click", () => {
-      const items = loadWorkspaceItems(key);
-      items.splice(index, 1);
-
+    // Persist any migration immediately so generated IDs stay stable for copy/delete.
+    // If migration cannot be saved, do not continue with temporary IDs.
+    const needsMigration = parsed.some((item) =>
+      !item || typeof item.id !== "string" ||
+      typeof item.body !== "string" || item.version !== 1 ||
+      typeof item.createdAt !== "string"
+    );
+    if (needsMigration) {
       try {
-        localStorage.setItem(key, JSON.stringify(items));
-        renderWorkspaceItems(key, displayId);
+        localStorage.setItem(config.key, JSON.stringify(normalized));
       } catch (error) {
-        statusBox.textContent = "Could not update browser storage.";
+        throw new Error(config.label + " entries were read, but could not be safely upgraded for editing. Free browser storage space and try again.");
       }
+    }
+    return normalized;
+  }
+
+  function writeItems(area, items) {
+    const config = AREAS[area];
+    try {
+      localStorage.setItem(config.key, JSON.stringify(items));
+      // Best-effort cross-tab notification; the primary save has already succeeded.
+      try {
+        localStorage.setItem(CHANGE_KEY, JSON.stringify({ area, at: Date.now() }));
+      } catch (_) {}
+      return true;
+    } catch (error) {
+      if (error && (error.name === "QuotaExceededError" || error.code === 22)) {
+        throw new Error("Browser storage is full. Your text has been kept.");
+      }
+      throw new Error("Browser storage could not save this change. Your text has been kept.");
+    }
+  }
+
+  function renderArea(area) {
+    const config = AREAS[area];
+    const container = document.getElementById(config.list);
+    if (!container) return;
+    container.replaceChildren();
+
+    let items;
+    try {
+      items = readItems(area);
+    } catch (error) {
+      const warning = document.createElement("p");
+      warning.textContent = error.message;
+      warning.setAttribute("role", "alert");
+      container.appendChild(warning);
+      return;
+    }
+
+    if (items.length === 0) {
+      const empty = document.createElement("p");
+      empty.textContent = "(No saved items yet.)";
+      empty.style.opacity = "0.7";
+      container.appendChild(empty);
+      return;
+    }
+
+    // Newest entries first. User-provided text is rendered with textContent, never as HTML.
+    items.slice().reverse().forEach((item) => {
+      const row = document.createElement("div");
+      row.className = "workspace-item";
+      row.dataset.id = item.id;
+      row.style.border = "1px solid #d0d7de";
+      row.style.borderRadius = "6px";
+      row.style.padding = "10px";
+      row.style.marginTop = "8px";
+
+      const meta = document.createElement("div");
+      meta.style.fontSize = "12px";
+      meta.style.opacity = "0.7";
+      const date = new Date(item.createdAt);
+      meta.textContent = Number.isNaN(date.getTime()) ? "" : date.toLocaleString();
+
+      const body = document.createElement("pre");
+      body.style.whiteSpace = "pre-wrap";
+      body.style.overflowWrap = "anywhere";
+      body.style.margin = "8px 0";
+      body.textContent = item.body;
+
+      const actions = document.createElement("div");
+      actions.style.display = "flex";
+      actions.style.gap = "8px";
+
+      const copy = document.createElement("button");
+      copy.type = "button";
+      copy.className = "ws-copy";
+      copy.textContent = "Copy";
+
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "ws-delete secondary";
+      remove.textContent = "Delete";
+
+      actions.append(copy, remove);
+      row.append(meta, body, actions);
+      container.appendChild(row);
     });
+  }
 
-    entry.append(content, removeButton);
-    container.appendChild(entry);
+  function saveArea(area) {
+    const config = AREAS[area];
+    const inputEl = document.getElementById(config.input);
+    const text = inputEl.value.trim();
+
+    if (!text) {
+      statusBox.textContent = "Please enter something before saving.";
+      return;
+    }
+    if (text.length > MAX_ENTRY_LENGTH) {
+      statusBox.textContent = "That entry is too long. Please keep it under 20,000 characters.";
+      return;
+    }
+
+    let items;
+    try {
+      items = readItems(area);
+      items.push({
+        id: makeId(),
+        body: text,
+        createdAt: new Date().toISOString(),
+        version: 1
+      });
+      writeItems(area, items);
+    } catch (error) {
+      statusBox.textContent = error.message || "Could not save this entry.";
+      return; // Crucially, preserve the text in the input when saving fails.
+    }
+
+    inputEl.value = "";
+    renderArea(area);
+    statusBox.textContent = "Saved to " + config.label + " in this browser.";
+  }
+
+  async function handleListClick(area, event) {
+    const button = event.target.closest("button");
+    if (!button) return;
+    const row = button.closest(".workspace-item");
+    if (!row) return;
+    const id = row.dataset.id;
+
+    if (button.classList.contains("ws-copy")) {
+      try {
+        const item = readItems(area).find((entry) => entry.id === id);
+        if (!item) throw new Error("That item could not be found.");
+        if (!navigator.clipboard || !navigator.clipboard.writeText) {
+          throw new Error("Clipboard access is unavailable in this browser.");
+        }
+        await navigator.clipboard.writeText(item.body);
+        statusBox.textContent = "Copied item to clipboard.";
+      } catch (error) {
+        statusBox.textContent = "Could not copy item: " + error.message;
+      }
+      return;
+    }
+
+    if (button.classList.contains("ws-delete")) {
+      if (!confirm("Delete this saved item?")) return;
+      try {
+        const items = readItems(area);
+        const index = items.findIndex((entry) => entry.id === id);
+        if (index < 0) {
+          renderArea(area);
+          statusBox.textContent = "That item was already removed or changed.";
+          return;
+        }
+        items.splice(index, 1);
+        writeItems(area, items);
+        renderArea(area);
+        statusBox.textContent = "Workspace item deleted.";
+      } catch (error) {
+        statusBox.textContent = error.message || "Could not delete this item.";
+      }
+    }
+  }
+
+  const toggle = document.getElementById("workspaceToggle");
+  const content = document.getElementById("workspaceContent");
+  if (toggle && content) {
+    toggle.addEventListener("click", () => {
+      const opening = content.hidden;
+      content.hidden = !opening;
+      toggle.textContent = opening ? "Close Workspace" : "Open Workspace";
+      toggle.setAttribute("aria-expanded", String(opening));
+    });
+  }
+
+  Object.keys(AREAS).forEach((area) => {
+    const config = AREAS[area];
+    const button = document.getElementById(config.button);
+    const container = document.getElementById(config.list);
+    if (button) button.addEventListener("click", () => saveArea(area));
+    if (container) container.addEventListener("click", (event) => handleListClick(area, event));
+    renderArea(area);
   });
-}
 
-function connectWorkspaceSave(buttonId, inputId, key, displayId) {
-  const button = document.getElementById(buttonId);
-  const input = document.getElementById(inputId);
-
-  if (!button || !input) return;
-
-  button.addEventListener("click", () => {
-    saveWorkspaceItem(key, input.value, displayId);
-
-    if (input.value.trim()) {
-      input.value = "";
+  // Other tabs can refresh their display after this tab saves or deletes an item.
+  window.addEventListener("storage", (event) => {
+    if (!event.key || event.key === CHANGE_KEY ||
+        Object.values(AREAS).some((config) => config.key === event.key)) {
+      Object.keys(AREAS).forEach(renderArea);
     }
   });
-}
-
-connectWorkspaceSave(
-  "saveBackpack",
-  "backpackEntry",
-  "agent007Backpack",
-  "backpackItems"
-);
-
-connectWorkspaceSave(
-  "saveClipboard",
-  "clipboardEntry",
-  "agent007Clipboard",
-  "clipboardItems"
-);
-
-connectWorkspaceSave(
-  "saveMemory",
-  "memoryEntry",
-  "agent007Memory",
-  "memoryItems"
-);
-
-renderWorkspaceItems("agent007Backpack", "backpackItems");
-renderWorkspaceItems("agent007Clipboard", "clipboardItems");
-renderWorkspaceItems("agent007Memory", "memoryItems");
-  </script>
+})();
+</script>
 </body>
 </html>
