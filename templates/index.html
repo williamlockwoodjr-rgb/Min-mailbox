@@ -386,10 +386,15 @@
           throw new Error(data.error || "The server returned an error.");
         }
 
-        messages.push({
-          role: "assistant",
-          content: data.reply || "I received an empty reply."
-        });
+messages.push({
+    role: "assistant",
+    assistantName: modeSelect.value === "agent007"
+        ? "Agent 007"
+        : modeSelect.value === "financial"
+            ? "Financial Wizard"
+            : "Mini Mailbox AI",
+    content: data.reply || "I received an empty reply."
+});
 
         saveMessages();
         displayMessages();
