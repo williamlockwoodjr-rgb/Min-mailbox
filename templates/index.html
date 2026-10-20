@@ -268,8 +268,7 @@
         const who = document.createElement("div");
         who.className = "who";
         who.textContent =
-          item.role === "user" ? "You" : modeSelect.value === "agent007" ? "Agent 007" : modeSelect.value === "financial" ? "Financial Wizard" : "Mini Mailbox AI";
-
+          item.role === "user" ? "You" : (item.assistantName || "Assistant (older message)");
         const content = document.createElement("div");
         content.textContent = item.content;
 
