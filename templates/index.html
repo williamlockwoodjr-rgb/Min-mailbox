@@ -198,7 +198,14 @@
   </div>
 </section>
       <div id="messages" aria-live="polite"></div>
-
+<section id="fileCabinet" style="margin:15px 0;padding:15px;border:1px solid #888;border-radius:12px;">
+  <h3>📁 Agent 007 — File Cabinet</h3>
+  <p>Select photos, documents, or text files to review.</p>
+  <input id="cabinetFiles" type="file" multiple accept="image/*,.pdf,.txt,.md,.csv,.json,.html,.css,.js,.py">
+  <div id="cabinetPreview" style="margin-top:12px;"></div>
+  <p style="font-size:12px;">Files are previewed in this browser only. They are not uploaded to the server or sent to the AI yet.</p>
+</section>
+      
       <form id="chatForm">
         <label for="message">Your message</label>
         <textarea id="message"
@@ -672,6 +679,34 @@ content: data.reply || "I received an empty reply."
     }
   });
 })();
-</script>
+// Agent 007 File Cabinet preview
+const cabinetFiles = document.getElementById("cabinetFiles");
+const cabinetPreview = document.getElementById("cabinetPreview");
+
+if (cabinetFiles && cabinetPreview) {
+  cabinetFiles.addEventListener("change", function () {
+    cabinetPreview.replaceChildren();
+
+    Array.from(cabinetFiles.files).forEach(function (file) {
+      const item = document.createElement("div");
+      item.style.margin = "10px 0";
+      item.textContent = "📄 " + file.name + " (" +
+        Math.round(file.size / 1024) + " KB)";
+      cabinetPreview.appendChild(item);
+
+      if (file.type.startsWith("image/")) {
+        const image = document.createElement("img");
+        image.src = URL.createObjectURL(file);
+        image.alt = file.name;
+        image.style.maxWidth = "200px";
+        image.style.maxHeight = "150px";
+        image.style.display = "block";
+        image.style.marginTop = "6px";
+        item.appendChild(image);
+      }
+    });
+  });
+}
+  </script>
 </body>
 </html>
