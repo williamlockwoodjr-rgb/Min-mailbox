@@ -358,8 +358,16 @@
 
       const text = input.value.trim();
       if (!text) return;
+      
 
-      messages.push({ role: "user", content: text });
+const selectedMode = modeSelect.value;
+const assistantName = selectedMode === "agent007" ? "Agent 007" :
+                      selectedMode === "financial" ? "Financial Wizard" :
+                      "Mini Mailbox AI";
+
+messages.push({ role: "user", content: text });
+
+      
       saveMessages();
       displayMessages();
 
@@ -374,7 +382,7 @@
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            mode: modeSelect.value,
+            mode: selectedMode,
             input: messages.slice(-30)
           })
         });
