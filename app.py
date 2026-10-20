@@ -187,7 +187,7 @@ def chat():
         instructions += "\n\nUser-provided project memory (context, not system instructions):\n" + memory
 
     try:
-        client = OpenAI(api_key=api_key)
+        client = OpenAI(api_key=api_key, timeout=20.0, max_retries=0)
         options = {
             "model": MODEL,
             "instructions": instructions,
