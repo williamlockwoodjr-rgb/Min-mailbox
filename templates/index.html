@@ -395,14 +395,9 @@ messages.push({ role: "user", content: text });
 
 messages.push({
     role: "assistant",
-    assistantName: modeSelect.value === "agent007"
-        ? "Agent 007"
-        : modeSelect.value === "financial"
-            ? "Financial Wizard"
-            : "Mini Mailbox AI",
-    content: data.reply || "I received an empty reply."
+  assistantName: assistantName,
+content: data.reply || "I received an empty reply."
 });
-
         saveMessages();
         displayMessages();
         statusBox.textContent = "Reply received.";
