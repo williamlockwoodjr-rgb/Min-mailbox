@@ -243,6 +243,22 @@
     const STORAGE_KEY = "miniMailboxMessages";
     let messages = [];
 
+        // Load saved Project Memory for Agent 007.
+    function getProjectMemoryForAI() {
+      try {
+        const saved = JSON.parse(localStorage.getItem("agent007Memory") || "[]");
+        if (!Array.isArray(saved)) return "";
+
+        const entries = saved
+          .map(item => item && typeof item.body === "string" ? item.body :
+                       item && typeof item.text === "string" ? item.text : "")
+          .filter(entry => entry.trim());
+
+        return entries.join("\n\n").slice(-12000);
+      } catch (error) {
+        return "";
+      }
+    }
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
       if (Array.isArray(saved)) {
@@ -390,7 +406,8 @@ messages.push({ role: "user", content: text });
           },
           body: JSON.stringify({
             mode: selectedMode,
-            input: messages.slice(-30)
+            input: messages.slice(-30),
+            memory: getProjectMemoryForAI()
           })
         });
 
