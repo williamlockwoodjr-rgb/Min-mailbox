@@ -233,6 +233,38 @@
   </footer>
 
   <script>
+    function getProjectMemoryForChat() {
+      try {
+        const raw = localStorage.getItem("agent007Memory");
+        if (!raw) return "";
+
+        const items = JSON.parse(raw);
+        if (!Array.isArray(items)) return "";
+
+        const selected = [];
+        let total = 0;
+
+        for (const item of items.slice(-30)) {
+          if (!item) continue;
+
+          const text = typeof item.body === "string" ? item.body :
+                       typeof item.text === "string" ? item.text : "";
+
+          if (!text.trim()) continue;
+
+          const remaining = 12000 - total;
+          if (remaining <= 0) break;
+
+          const entry = text.trim().slice(0, remaining);
+          selected.push(entry);
+          total += entry.length;
+        }
+
+        return selected.join("\n\n---\n\n");
+      } catch (error) {
+        return "";
+      }
+    }
     const form = document.getElementById("chatForm");
     const input = document.getElementById("message");
     const messagesBox = document.getElementById("messages");
@@ -390,7 +422,10 @@ messages.push({ role: "user", content: text });
           },
           body: JSON.stringify({
             mode: selectedMode,
-            input: messages.slice(-30)
+            input: messages.slice(-30),
+            memory: selectedMode === "mailbox"
+              ? ""
+              : getProjectMemoryForChat()
           })
         });
 
