@@ -4,273 +4,471 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Mini Mailbox</title>
+  <title>Project Mini Mailbox</title>
   <style>
     * { box-sizing: border-box; }
 
+    :root {
+      color-scheme: dark;
+      --page: #101722;
+      --panel: #192535;
+      --border: #34485f;
+      --text: #eef4fc;
+      --muted: #b6c5d8;
+      --accent: #58a6ff;
+    }
+
     body {
       margin: 0;
-      font-family: Arial, sans-serif;
-      background: #f0f4f8;
-      color: #243247;
+      background: var(--page);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.5;
     }
 
-    header {
-      background: #253b59;
-      color: white;
-      padding: 22px;
-      text-align: center;
+    button, select, textarea {
+      font: inherit;
     }
 
-    header h1 { margin: 0 0 8px; }
-    header p { margin: 0; }
+    button, select {
+      cursor: pointer;
+    }
+
+    .topbar {
+      padding: 14px 20px;
+      background: #131e2c;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .brand {
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: .3px;
+    }
+
+    .brand span { color: var(--accent); }
+
+    .topbar a, .support a {
+      color: #9dccff;
+    }
 
     main {
-      max-width: 760px;
-      margin: 24px auto;
-      padding: 16px;
+      width: min(1440px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .dashboard-image {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #111927;
+    }
+
+    .caption {
+      margin: 10px 2px 22px;
+      color: var(--muted);
+      font-size: .88rem;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
+      gap: 18px;
+      align-items: start;
     }
 
     .panel {
-      background: white;
+      min-width: 0;
+      background: var(--panel);
+      border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 18px;
-      box-shadow: 0 3px 14px #00000012;
+      padding: 20px;
+      box-shadow: 0 8px 28px #00000020;
     }
+
+    h1, h2, h3 { line-height: 1.25; }
+    h1 { font-size: 1.55rem; margin: 0 0 8px; }
+    h2 { font-size: 1.2rem; margin: 0 0 12px; }
+    h3 { font-size: 1rem; margin: 0 0 8px; }
+
+    p { color: var(--muted); }
 
     label {
       display: block;
-      margin: 10px 0 6px;
-      font-weight: bold;
-    }
-
-    select, textarea, button {
-      width: 100%;
-      font: inherit;
-      padding: 12px;
-      border-radius: 8px;
+      margin: 14px 0 6px;
+      font-weight: 700;
     }
 
     select, textarea {
-      border: 1px solid #bbc6d3;
-      background: white;
+      width: 100%;
+      padding: 12px;
+      color: var(--text);
+      background: #101a28;
+      border: 1px solid #526780;
+      border-radius: 8px;
     }
 
     textarea {
-      min-height: 90px;
+      min-height: 110px;
       resize: vertical;
     }
 
     button {
-      border: 0;
-      background: #315f91;
-      color: white;
-      cursor: pointer;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 11px 15px;
+      color: #fff;
+      background: #2468ad;
+      font-weight: 700;
+    }
+
+    button:hover { filter: brightness(1.13); }
+    button:disabled { opacity: .6; cursor: wait; }
+
+    .secondary {
+      background: #34465b;
+      border-color: #526780;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
       margin-top: 10px;
     }
 
-    button:disabled {
-      opacity: .6;
-      cursor: wait;
-    }
-
-    .secondary {
-      background: #687789;
-    }
+    .button-row button { flex: 1; }
 
     #messages {
-      margin-top: 20px;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      margin: 18px 0;
+      max-height: 440px;
+      overflow-y: auto;
     }
 
     .message {
-      padding: 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
       border-radius: 10px;
-      white-space: pre-wrap;
       overflow-wrap: anywhere;
+      white-space: pre-wrap;
     }
 
-    .user {
-      background: #e1edfc;
-      margin-left: 24px;
+    .message.user {
+      background: #203c59;
+      margin-left: 20px;
     }
 
-    .assistant {
-      background: #e5f5e9;
-      margin-right: 24px;
+    .message.assistant {
+      background: #203a35;
+      margin-right: 20px;
     }
 
     .who {
-      font-weight: bold;
-      margin-bottom: 6px;
+      font-weight: 700;
+      margin-bottom: 5px;
+      color: #c5e1ff;
     }
+
+    .message.assistant .who { color: #a8e8c4; }
 
     #status {
       margin-top: 12px;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      color: #c4d5e8;
+      font-size: .92rem;
+    }
+
+    .status-label {
+      display: inline-block;
+      padding: 4px 9px;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--muted);
+      font-size: .8rem;
+      margin-bottom: 12px;
+    }
+
+    .support {
+      margin-top: 18px;
+      background: #172b40;
+      border: 1px solid #365675;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .support p { margin-bottom: 14px; }
+
+    .support-button {
+      display: inline-block;
+      padding: 10px 14px;
+      background: #2468ad;
+      color: white !important;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+
+    .note {
+      font-size: .88rem;
+      color: var(--muted);
     }
 
     footer {
+      padding: 24px 18px;
       text-align: center;
-      color: #657386;
-      padding: 20px;
-      font-size: 14px;
+      color: var(--muted);
+      font-size: .85rem;
+    }
+
+    @media (max-width: 760px) {
+      main { padding: 10px; }
+      .workspace { grid-template-columns: 1fr; }
+      .panel { padding: 15px; }
+      .topbar { padding: 12px; }
+      #messages { max-height: 360px; }
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>📬 Mini Mailbox</h1>
-    <p>A little place for your thoughts, ideas, and conversations.</p>
+  <header class="topbar">
+    <div class="brand">PROJECT <span>MINI MAILBOX</span></div>
+    <a href="#mailbox">Open Mailbox ↓</a>
   </header>
 
   <main>
-    <section class="panel">
-      <label for="mode">Choose your assistant</label>
-      <select id="mode">
-        <option value="mailbox">Mini Mailbox</option>
-        <option value="agent007">Project Agent 007</option>
-        <option value="financial">Financial Wizard</option>
-      </select>
-
-      <div id="messages" aria-live="polite"></div>
-
-      <form id="chatForm">
-        <label for="message">Your message</label>
-        <textarea id="message"
-          placeholder="Write your message here..."
-          required></textarea>
-        <button id="send" type="submit">Send Message</button>
-      </form>
-
-      <div id="status" role="status"></div>
-      <button id="clear" class="secondary" type="button">
-        Clear Conversation
-      </button>
+    <section aria-label="Approved dashboard design">
+      <img
+        class="dashboard-image"
+        src="https://raw.githubusercontent.com/williamlockwoodjr-rgb/Min-mailbox/main/Project%20Mini%20Mailbox%20Dashboard%20(2).png"
+        alt="Project Mini Mailbox dashboard master design"
+      >
+      <p class="caption">
+        Project dashboard — original reference image displayed without edits.
+      </p>
     </section>
+
+    <div class="workspace">
+      <section class="panel" id="mailbox">
+        <span class="status-label">CONVERSATION WORKSPACE</span>
+        <h1>Mini Mailbox</h1>
+        <p>
+          A place for thoughts, questions, ideas, and conversations.
+          Choose an assistant and send a message below.
+        </p>
+
+        <label for="mode">Choose your assistant</label>
+        <select id="mode">
+          <option value="mailbox">Mini Mailbox</option>
+          <option value="agent007">Project Agent 007</option>
+          <option value="financial">Financial Wizard</option>
+        </select>
+
+        <div id="messages" aria-live="polite"></div>
+
+        <form id="chatForm">
+          <label for="message">Your message</label>
+          <textarea
+            id="message"
+            placeholder="What would you like to explore today?"
+            required
+          ></textarea>
+          <div class="button-row">
+            <button id="send" type="submit">Send Message</button>
+            <button id="clear" class="secondary" type="button">
+              Clear Conversation
+            </button>
+          </div>
+        </form>
+
+        <div id="status" role="status" aria-live="polite">
+          Your mailbox is ready.
+        </div>
+        <p class="note">
+          Conversation history is saved in this browser on this device.
+        </p>
+      </section>
+
+      <aside>
+        <section class="panel">
+          <h2>Project Agent 007</h2>
+          <p>
+            Your project helper for exploring ideas, reviewing code,
+            and organizing investigations. Choose Project Agent 007
+            in the mailbox to send it a message.
+          </p>
+        </section>
+
+        <section class="support" id="support">
+          <h2>Support Our Adventures</h2>
+          <p>
+            Please consider helping support Project Mini Mailbox, along
+            with our other creative adventures exploring science,
+            uncovering new possibilities by re-examining forgotten
+            theories, and expanding our understanding through innovative
+            tools and fresh insights.
+          </p>
+          <a
+            class="support-button"
+            href="https://cash.app/$Mrwillock"
+            target="_blank"
+            rel="noopener noreferrer"
+          >Support via Cash App</a>
+          <p class="note">
+            This link opens Cash App. Any contribution is voluntary.
+          </p>
+        </section>
+      </aside>
+    </div>
   </main>
 
   <footer>
-    Your conversation history is saved in this browser.
+    Project Mini Mailbox · Exploring ideas and new possibilities.
   </footer>
 
   <script>
-    const form = document.getElementById("chatForm");
-    const input = document.getElementById("message");
-    const messagesBox = document.getElementById("messages");
-    const statusBox = document.getElementById("status");
-    const sendButton = document.getElementById("send");
-    const modeSelect = document.getElementById("mode");
+    (() => {
+      const form = document.getElementById("chatForm");
+      const input = document.getElementById("message");
+      const messagesBox = document.getElementById("messages");
+      const statusBox = document.getElementById("status");
+      const sendButton = document.getElementById("send");
+      const modeSelect = document.getElementById("mode");
+      const clearButton = document.getElementById("clear");
 
-    const STORAGE_KEY = "miniMailboxMessages";
-    let messages = [];
-
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-      if (Array.isArray(saved)) {
-        messages = saved.filter(item =>
-          item &&
-          ["user", "assistant"].includes(item.role) &&
-          typeof item.content === "string"
-        );
-      }
-    } catch (error) {
-      messages = [];
-    }
-
-    function saveMessages() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-      } catch (error) {
-        statusBox.textContent =
-          "Your browser could not save the conversation.";
-      }
-    }
-
-    function displayMessages() {
-      messagesBox.replaceChildren();
-
-      for (const item of messages) {
-        const card = document.createElement("div");
-        card.className = "message " + item.role;
-
-        const who = document.createElement("div");
-        who.className = "who";
-        who.textContent =
-          item.role === "user" ? "You" : "Mini Mailbox AI";
-
-        const content = document.createElement("div");
-        content.textContent = item.content;
-
-        card.append(who, content);
-        messagesBox.appendChild(card);
-      }
-
-      messagesBox.scrollTop = messagesBox.scrollHeight;
-    }
-
-    displayMessages();
-
-    form.addEventListener("submit", async event => {
-      event.preventDefault();
-
-      const text = input.value.trim();
-      if (!text) return;
-
-      messages.push({ role: "user", content: text });
-      saveMessages();
-      displayMessages();
-
-      input.value = "";
-      statusBox.textContent = "Waiting for your AI reply...";
-      sendButton.disabled = true;
+      const STORAGE_KEY = "miniMailboxMessages";
+      let messages = [];
 
       try {
-        const response = await fetch("/api/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            mode: modeSelect.value,
-            input: messages.slice(-30)
-          })
-        });
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        if (Array.isArray(saved)) {
+          messages = saved.filter(item =>
+            item &&
+            ["user", "assistant"].includes(item.role) &&
+            typeof item.content === "string"
+          );
+        }
+      } catch (_) {
+        messages = [];
+      }
 
-        const data = await response.json();
+      function saveMessages() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+        } catch (_) {
+          statusBox.textContent =
+            "The browser could not save this conversation.";
+        }
+      }
 
-        if (!response.ok) {
-          throw new Error(data.error || "The server returned an error.");
+      function displayMessages() {
+        messagesBox.replaceChildren();
+
+        for (const item of messages) {
+          const card = document.createElement("div");
+          card.className = "message " + item.role;
+
+          const who = document.createElement("div");
+          who.className = "who";
+          who.textContent = item.role === "user"
+            ? "You"
+            : "Mini Mailbox AI";
+
+          const content = document.createElement("div");
+          content.textContent = item.content;
+
+          card.append(who, content);
+          messagesBox.appendChild(card);
         }
 
-        messages.push({
-          role: "assistant",
-          content: data.reply || "I received an empty reply."
-        });
+        messagesBox.scrollTop = messagesBox.scrollHeight;
+      }
 
+      displayMessages();
+
+      form.addEventListener("submit", async event => {
+        event.preventDefault();
+
+        const text = input.value.trim();
+        if (!text || sendButton.disabled) return;
+
+        messages.push({ role: "user", content: text });
         saveMessages();
         displayMessages();
-        statusBox.textContent = "Reply received.";
-      } catch (error) {
-        statusBox.textContent =
-          "Could not get an AI reply: " + error.message +
-          "\nYour message remains in the conversation. You can try again.";
-      } finally {
-        sendButton.disabled = false;
-        input.focus();
-      }
-    });
 
-    document.getElementById("clear").addEventListener("click", () => {
-      if (!confirm("Clear the saved conversation in this browser?")) return;
+        input.value = "";
+        statusBox.textContent = "Waiting for your AI reply...";
+        sendButton.disabled = true;
 
-      messages = [];
-      saveMessages();
-      displayMessages();
-      statusBox.textContent = "Conversation cleared.";
-    });
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              mode: modeSelect.value,
+              input: messages.slice(-30)
+            })
+          });
+
+          let data;
+          try {
+            data = await response.json();
+          } catch (_) {
+            throw new Error(
+              "The server returned an unreadable response. Please try again."
+            );
+          }
+
+          if (!response.ok) {
+            throw new Error(
+              data.error || "The server returned error " + response.status
+            );
+          }
+
+          if (typeof data.reply !== "string" || !data.reply.trim()) {
+            throw new Error("The server returned an empty AI reply.");
+          }
+
+          messages.push({
+            role: "assistant",
+            content: data.reply
+          });
+
+          saveMessages();
+          displayMessages();
+          statusBox.textContent = "Reply received.";
+        } catch (error) {
+          statusBox.textContent =
+            "Could not get an AI reply: " + error.message +
+            "\nYour message remains saved. You can try again.";
+        } finally {
+          sendButton.disabled = false;
+          input.focus();
+        }
+      });
+
+      clearButton.addEventListener("click", () => {
+        if (!confirm(
+          "Clear the saved conversation in this browser? This cannot be undone."
+        )) return;
+
+        messages = [];
+        saveMessages();
+        displayMessages();
+        statusBox.textContent = "Conversation cleared.";
+      });
+    })();
   </script>
 </body>
 </html>
