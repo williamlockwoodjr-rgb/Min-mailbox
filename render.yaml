@@ -1,4 +1,4 @@
-services:
+sservices:
   - type: web
     name: mini-mailbox
     runtime: python
@@ -7,4 +7,4 @@ services:
     healthCheckPath: /
     envVars:
       - key: OPENAI_API_KEY
-        sync: false
+        sync: false 
