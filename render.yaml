@@ -1,0 +1,11 @@
+
+services:
+  - type: web
+    name: mini-mailbox
+    runtime: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    healthCheckPath: /
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false
