@@ -1,5 +1,3 @@
-YAML
-
 services:
   - type: web
     name: mini-mailbox
